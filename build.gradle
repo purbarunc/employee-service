@@ -1,0 +1,70 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '4.0.3'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+// Gradle 9: Enable configuration cache for faster builds
+tasks.configureEach {
+	// Most Spring Boot and Gradle tasks are compatible with configuration cache
+	if (name.matches('^(compileJava|processResources|bootJar|test|validateJavaVersion|build|testClasses|assemble|check|jar|processTestResources|resolveMainClassName|classes|compileTestJava)$')) {
+		// These tasks are compatible with configuration cache
+	} else if (name.matches('^(clean|bootRun)$')) {
+		// These tasks are explicitly not compatible
+		notCompatibleWithConfigurationCache("Task $name is not compatible with configuration cache")
+	}
+}
+
+group = 'com.purbarun.employee'
+version = '0.0.1-SNAPSHOT'
+description = 'Demo project for Spring Boot'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(25)
+	}
+}
+
+// Gradle 9: Use modern configuration cache and build optimization
+tasks.withType(JavaCompile).configureEach {
+	options.release = 25
+	options.encoding = 'UTF-8'
+	options.compilerArgs += ['-Xlint:unchecked', '-Xlint:deprecation']
+}
+
+// Gradle 9: Improved validation task with proper logging
+tasks.register('validateJavaVersion') {
+	doLast {
+		def currentJava = System.getProperty('java.version')
+		if (!currentJava.startsWith('25')) {
+			throw new GradleException("Java 25 is required but found: ${currentJava}")
+		}
+		logger.lifecycle("Java version validation passed: ${currentJava}")
+	}
+}
+
+// Gradle 9: Use lazy task configuration
+tasks.named('compileJava') {
+	dependsOn 'validateJavaVersion'
+}
+
+// Gradle 9: Enable configuration cache and build cache optimization
+tasks.withType(Test).configureEach {
+	useJUnitPlatform()
+	testLogging {
+		events "passed", "skipped", "failed"
+		exceptionFormat = "full"
+	}
+}
+
+// Gradle 9: Modern repository configuration
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+	runtimeOnly 'org.postgresql:postgresql'
+	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
