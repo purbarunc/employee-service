@@ -10,8 +10,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.purbarun.employee.dto.EmployeeCreateRequest;
+import com.purbarun.employee.enums.BulkCreationStrategy;
 import com.purbarun.employee.model.Employee;
 import com.purbarun.employee.repository.EmployeeRepository;
+import com.purbarun.employee.service.bulk.BulkEmployeeCreationService;
 
 @Service
 public class EmployeeService {
@@ -19,10 +22,15 @@ public class EmployeeService {
 	private static final Logger logger = LoggerFactory.getLogger(EmployeeService.class);
 
 	private final EmployeeRepository employeeRepository;
+	private final BulkEmployeeCreationService bulkEmployeeCreationService;
+
 
 	// Constructor injection (preferred)
-	public EmployeeService(EmployeeRepository employeeRepository) {
+	public EmployeeService(EmployeeRepository employeeRepository, 
+            BulkEmployeeCreationService bulkEmployeeCreationService) {
 		this.employeeRepository = Objects.requireNonNull(employeeRepository);
+		this.bulkEmployeeCreationService = Objects.requireNonNull(bulkEmployeeCreationService);
+
 	}
 
 	// Create
@@ -86,4 +94,30 @@ public class EmployeeService {
 		employeeRepository.deleteById(id);
 		logger.info("Deleted and evicted from cache employee with ID: {}", id);
 	}
+	
+	/**
+     * Bulk create employees using the configured strategy (ASYNC or BATCH)
+     * @param createRequests List of employee creation requests
+     * @return List of created employees
+     */
+    @Transactional
+    public List<Employee> bulkCreateEmployees(List<EmployeeCreateRequest> createRequests) {
+        BulkCreationStrategy strategy = bulkEmployeeCreationService.getStrategy();
+        logger.info("Using {} strategy for bulk creation of {} employees", 
+                   strategy.getDisplayName(), createRequests.size());
+        
+        List<Employee> createdEmployees = bulkEmployeeCreationService.bulkCreateEmployees(createRequests);
+        
+        logger.info("Bulk created {} employees", createdEmployees.size());
+        return createdEmployees;
+    }
+    
+    /**
+     * Get the current bulk creation strategy being used
+     * @return The strategy type (ASYNC or BATCH)
+     */
+    public BulkCreationStrategy getBulkCreationStrategy() {
+        return bulkEmployeeCreationService.getStrategy();
+    }
+
 }

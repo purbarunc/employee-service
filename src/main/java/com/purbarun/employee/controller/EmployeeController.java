@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Objects;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.purbarun.employee.dto.BulkEmployeeCreateRequest;
 import com.purbarun.employee.model.Address;
 import com.purbarun.employee.model.Employee;
 import com.purbarun.employee.service.AddressService;
@@ -87,5 +89,17 @@ public class EmployeeController {
 		} catch (IllegalArgumentException e) {
 			return ResponseEntity.notFound().build();
 		}
+	}
+	
+	@PostMapping("/employees")
+	public ResponseEntity<?> bulkCreateEmployees(@Valid @RequestBody BulkEmployeeCreateRequest bulkRequest) {
+	    try {
+	        List<Employee> createdEmployees = employeeService.bulkCreateEmployees(bulkRequest.employees());
+	        return ResponseEntity.status(HttpStatus.CREATED).body(createdEmployees);
+	    } catch (IllegalArgumentException e) {
+	        return ResponseEntity.badRequest().body(e.getMessage());
+	    } catch (Exception e) {
+	        return ResponseEntity.internalServerError().body("Bulk creation failed: " + e.getMessage());
+	    }
 	}
 }
