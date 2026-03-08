@@ -29,7 +29,7 @@ java {
 tasks.withType(JavaCompile).configureEach {
 	options.release = 25
 	options.encoding = 'UTF-8'
-	options.compilerArgs += ['-Xlint:unchecked', '-Xlint:deprecation']
+	options.compilerArgs += ['-Xlint:unchecked', '-Xlint:deprecation', '-parameters']
 }
 
 // Gradle 9: Improved validation task with proper logging
@@ -66,6 +66,12 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.boot:spring-boot-starter-cache'
+	implementation 'com.github.ben-manes.caffeine:caffeine'
+	implementation 'org.ehcache:ehcache'
+	// EHCache needs javax.* JAXB (not jakarta.*)
+    implementation 'javax.xml.bind:jaxb-api:2.3.1'
+    implementation 'org.glassfish.jaxb:jaxb-runtime:2.3.1'
 	runtimeOnly 'org.postgresql:postgresql'
 	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
