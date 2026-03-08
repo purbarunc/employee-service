@@ -9,6 +9,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
 
 import com.purbarun.employee.dto.EmployeeCreateRequest;
 import com.purbarun.employee.enums.BulkCreationStrategy;
@@ -24,10 +27,9 @@ public class EmployeeService {
 	private final EmployeeRepository employeeRepository;
 	private final BulkEmployeeCreationService bulkEmployeeCreationService;
 
-
 	// Constructor injection (preferred)
-	public EmployeeService(EmployeeRepository employeeRepository, 
-            BulkEmployeeCreationService bulkEmployeeCreationService) {
+	public EmployeeService(EmployeeRepository employeeRepository,
+			BulkEmployeeCreationService bulkEmployeeCreationService) {
 		this.employeeRepository = Objects.requireNonNull(employeeRepository);
 		this.bulkEmployeeCreationService = Objects.requireNonNull(bulkEmployeeCreationService);
 
@@ -35,6 +37,7 @@ public class EmployeeService {
 
 	// Create
 	@Transactional
+	@CacheEvict(value = {"employees", "employeeById"}, allEntries = true)
 	public Employee createEmployee(Employee employee) {
 		var now = LocalDateTime.now();
 		employee.setCreatedAt(now);
@@ -47,12 +50,14 @@ public class EmployeeService {
 	}
 
 	// Read single - returns Optional so callers can decide how to handle absence
+	@Cacheable(value = "employeeById", key = "#p0")
 	public Optional<Employee> getEmployee(Long id) {
 		logger.debug("Fetching employee {} from database", id);
 		return employeeRepository.findById(id);
 	}
 
 	// Read all
+	@Cacheable(value = "employees")
 	public List<Employee> getAllEmployees() {
 		logger.debug("Fetching all employees from database");
 		return (List<Employee>) employeeRepository.findAll();
@@ -60,6 +65,8 @@ public class EmployeeService {
 
 	// Update - transactional to ensure consistency
 	@Transactional
+	@CachePut(value = "employeeById", key = "#p0")
+	@CacheEvict(value = "employees", allEntries = true)
 	public Employee updateEmployee(Long id, Employee updated) {
 		logger.debug("Updating employee with ID: {}", id);
 
@@ -84,6 +91,7 @@ public class EmployeeService {
 
 	// Delete
 	@Transactional
+	@CacheEvict(value = {"employees", "employeeById"}, key = "#p0")
 	public void deleteEmployee(Long id) {
 		logger.debug("Deleting employee with ID: {}", id);
 
@@ -94,30 +102,33 @@ public class EmployeeService {
 		employeeRepository.deleteById(id);
 		logger.info("Deleted and evicted from cache employee with ID: {}", id);
 	}
-	
+
 	/**
-     * Bulk create employees using the configured strategy (ASYNC or BATCH)
-     * @param createRequests List of employee creation requests
-     * @return List of created employees
-     */
-    @Transactional
-    public List<Employee> bulkCreateEmployees(List<EmployeeCreateRequest> createRequests) {
-        BulkCreationStrategy strategy = bulkEmployeeCreationService.getStrategy();
-        logger.info("Using {} strategy for bulk creation of {} employees", 
-                   strategy.getDisplayName(), createRequests.size());
-        
-        List<Employee> createdEmployees = bulkEmployeeCreationService.bulkCreateEmployees(createRequests);
-        
-        logger.info("Bulk created {} employees", createdEmployees.size());
-        return createdEmployees;
-    }
-    
-    /**
-     * Get the current bulk creation strategy being used
-     * @return The strategy type (ASYNC or BATCH)
-     */
-    public BulkCreationStrategy getBulkCreationStrategy() {
-        return bulkEmployeeCreationService.getStrategy();
-    }
+	 * Bulk create employees using the configured strategy (ASYNC or BATCH)
+	 * 
+	 * @param createRequests List of employee creation requests
+	 * @return List of created employees
+	 */
+	@Transactional
+	@CacheEvict(value = {"employees", "employeeById"}, allEntries = true)
+	public List<Employee> bulkCreateEmployees(List<EmployeeCreateRequest> createRequests) {
+		BulkCreationStrategy strategy = bulkEmployeeCreationService.getStrategy();
+		logger.info("Using {} strategy for bulk creation of {} employees", strategy.getDisplayName(),
+				createRequests.size());
+
+		List<Employee> createdEmployees = bulkEmployeeCreationService.bulkCreateEmployees(createRequests);
+
+		logger.info("Bulk created {} employees", createdEmployees.size());
+		return createdEmployees;
+	}
+
+	/**
+	 * Get the current bulk creation strategy being used
+	 * 
+	 * @return The strategy type (ASYNC or BATCH)
+	 */
+	public BulkCreationStrategy getBulkCreationStrategy() {
+		return bulkEmployeeCreationService.getStrategy();
+	}
 
 }
